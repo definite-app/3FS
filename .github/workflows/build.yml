@@ -28,21 +28,6 @@ jobs:
           /usr/share/swift
         df -h
 
-    - name: Configure sccache-cache
-      run: |
-        echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-
-    - name: Run sccache-cache
-      uses: mozilla-actions/sccache-action@v0.0.4
-
-    # sccache-action exports CC="sccache cc". Meson treats that as one
-    # compiler name and fails with "Compiler sccache cc can not compile
-    # programs." Force real compilers for C/C++; wrap only rustc.
-    - name: Use real C/C++ compilers
-      run: |
-        echo "CC=clang-14" >> $GITHUB_ENV
-        echo "CXX=clang++-14" >> $GITHUB_ENV
-
     - name: Prepare
       run: |
         sudo apt-get update
@@ -59,7 +44,7 @@ jobs:
         sudo dpkg -i foundationdb-clients_7.1.61-1_amd64.deb
         git clone https://github.com/libfuse/libfuse.git libfuse -b fuse-3.16.2 --depth 1
         cmake -E make_directory libfuse/build
-        meson setup libfuse/build libfuse
+        CC=clang-14 CXX=clang++-14 meson setup libfuse/build libfuse
         ninja -C libfuse/build
         sudo ninja -C libfuse/build install
         rm -rf libfuse
@@ -67,8 +52,6 @@ jobs:
         ./patches/apply.sh
 
     - name: Build
-      env:
-        RUSTC_WRAPPER: sccache
       run: |
         cargo build --release
         cmake -S . -B build \

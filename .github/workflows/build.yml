@@ -51,7 +51,19 @@ jobs:
         git submodule update --init --recursive
         ./patches/apply.sh
 
+    # 16GB hosted runners OOM when Arrow + Folly + RocksDB compile together.
+    - name: Enable swap
+      run: |
+        sudo fallocate -l 8G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        free -h
+
     - name: Build
+      env:
+        CMAKE_BUILD_PARALLEL_LEVEL: 2
+        CARGO_BUILD_JOBS: 2
       run: |
         cargo build --release
         cmake -S . -B build \
@@ -59,4 +71,4 @@ jobs:
           -DCMAKE_C_COMPILER=clang-14 \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        cmake --build build -j "$(nproc)"
+        cmake --build build --parallel 2

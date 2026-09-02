@@ -30,17 +30,24 @@ jobs:
 
     - name: Configure sccache-cache
       run: |
-        echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
         echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
 
     - name: Run sccache-cache
       uses: mozilla-actions/sccache-action@v0.0.4
 
+    # sccache-action exports CC="sccache cc". Meson treats that as one
+    # compiler name and fails with "Compiler sccache cc can not compile
+    # programs." Force real compilers for C/C++; wrap only rustc.
+    - name: Use real C/C++ compilers
+      run: |
+        echo "CC=clang-14" >> $GITHUB_ENV
+        echo "CXX=clang++-14" >> $GITHUB_ENV
+
     - name: Prepare
       run: |
         sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-          cmake ninja-build meson pkg-config wget \
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          cmake ninja-build meson pkg-config wget build-essential \
           libuv1-dev liblz4-dev liblzma-dev libdouble-conversion-dev \
           libprocps-dev libdwarf-dev libunwind-dev libaio-dev \
           libgflags-dev libgoogle-glog-dev libgtest-dev libgmock-dev \
@@ -60,6 +67,8 @@ jobs:
         ./patches/apply.sh
 
     - name: Build
+      env:
+        RUSTC_WRAPPER: sccache
       run: |
         cargo build --release
         cmake -S . -B build \

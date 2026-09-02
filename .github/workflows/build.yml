@@ -52,12 +52,14 @@ jobs:
         ./patches/apply.sh
 
     # 16GB hosted runners OOM when Arrow + Folly + RocksDB compile together.
-    - name: Enable swap
+    # /swapfile is already active on ubuntu-22.04 runners ("Text file busy").
+    - name: Enable extra swap
       run: |
-        sudo fallocate -l 8G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
+        sudo rm -f /swapfile.ci
+        sudo fallocate -l 8G /swapfile.ci
+        sudo chmod 600 /swapfile.ci
+        sudo mkswap /swapfile.ci
+        sudo swapon /swapfile.ci
         free -h
 
     - name: Build
